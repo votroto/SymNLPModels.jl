@@ -19,37 +19,58 @@ mutable struct SymNLPModel{T,S} <: AbstractNLPModel{T,S}
     _gradient!::Function
 
     _jacobian_buffer::SparseMatrixCSC{T, Int}
-    _hessian_buffer::SparseMatrixCSC{T, Int}
 end
 
-SymNLPModel(objective) = SymNLPModel(objective, [])
+"""
+    SymNLPModel(
+    objective::Sym.Num, 
+    inequalities::AbstractVector{Sym.Inequality};
+    variables = Sym.get_variables(objective),
+    initial = randn(length(variables))
+)
 
-function SymNLPModel(objective, inequalities)
-    variables = Sym.get_variables(objective)
+Nonlinear symbolic mathematical model with an objective and variables 
+constrained by inequalities.
+"""
+function SymNLPModel(
+    objective::Sym.Num, 
+    inequalities::AbstractVector{Sym.Inequality};
+    variables = Sym.get_variables(objective),
+    initial = randn(length(variables))
+)
+    build(f) = Sym.build_function(f, variables; expression=false)
+    
     constraints = map(inequality_to_expr, inequalities)
     hessian = Sym.sparsehessian(objective, variables)
     jacobian = Sym.sparsejacobian(constraints, variables)
     gradient = Sym.gradient(objective, variables)
-    
-    build(f) = Sym.build_function(f, variables; expression=false)
+
     _objective = build(objective)
-    _constraints! = build(constraints)[2]
-    _jacobian! = build(jacobian)[2]
-    _lagrangian_hessian! = build_lagrangian_hessian(objective, constraints)
-    _gradient! = build(gradient)[2]
+    _lagrangian_hessian! = build!_lagrangian_hessian(objective, constraints)
+    _, _constraints! = build(constraints)
+    _, _jacobian! = build(jacobian)
+    _, _gradient! = build(gradient)
 
     nnzh = nnz(hessian)
     nnzj = nnz(jacobian)
     ncon = length(constraints)
     nvar = length(variables)
     ucon = zeros(ncon)
-    meta = NLPModelMeta(nvar; nnzh, nnzj, ncon, ucon)
+    meta = NLPModelMeta(nvar; x0=initial, nnzh, nnzj, ncon, ucon)
     counters = Counters()
 
     jacobian_buffer = similar(jacobian, Float64)
-    hessian_buffer = similar(hessian, Float64)
 
     SymNLPModel(meta, counters, objective, variables, jacobian, hessian, 
         gradient, _objective, _constraints!, _jacobian!, _lagrangian_hessian!, 
-        _gradient!, jacobian_buffer, hessian_buffer)
+        _gradient!, jacobian_buffer)
+end
+
+function SymNLPModel(objective, inequalities; kwargs...)
+    _inequalities = map(_to_inequality, inequalities)
+    SymNLPModel(Sym.Num(objective), _inequalities; kwargs...)
+end
+
+function SymNLPModel(objective; kwargs...) 
+    SymNLPModel(Sym.Num(objective), Sym.Inequality[]; kwargs...)
 end

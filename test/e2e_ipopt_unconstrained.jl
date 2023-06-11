@@ -2,8 +2,9 @@ using Symbolics
 using NLPModelsIpopt: ipopt
 
 @testset "unconstrained" begin
-    @testset "trivial single variable" for center in -2:1.3:2
+    @testset "concave univariate" begin
         @variables x
+        center = randn()
 
         objective = (x - center)^2
         tol = 1e-4

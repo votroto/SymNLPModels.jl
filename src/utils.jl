@@ -1,7 +1,7 @@
 using LinearAlgebra: mul!
-using Symbolics: Inequality, geq
+import Symbolics as Sym
 
-function build_lagrangian_hessian(objective, constraints)
+function build!_lagrangian_hessian(objective, constraints)
     variables = Sym.get_variables(objective)
     hess(f) = Sym.sparsehessian(f, variables) 
     build!(f) = Sym.build_function(f, variables; expression=false)[2]
@@ -39,7 +39,22 @@ function sa_structure!(rows, cols, sa)
     rows, cols
 end
 
-function inequality_to_expr(ineq::Inequality)
+function inequality_to_expr(ineq::Sym.Inequality)
     lhs, rhs, op = ineq.lhs, ineq.rhs, ineq.relational_op
-    (op == geq) ? -lhs + rhs : lhs - rhs
+    (op == Sym.geq) ? -lhs + rhs : lhs - rhs
 end
+
+function parse_solution(model, solution)
+    Dict(model.variables .=> solution)
+end
+
+function value(solution_dict::AbstractDict, keys::AbstractArray)
+    map(k -> get(solution_dict, k, NaN), keys)
+end
+
+function value(solution_dict::AbstractDict, key)
+    get(solution_dict, key, NaN)
+end
+
+_to_inequality(ineq::Sym.Inequality) = ineq
+_to_inequality(ineq) = Sym.Inequality(ineq)
