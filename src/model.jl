@@ -24,9 +24,9 @@ end
 
 SymNLPModel(objective) = SymNLPModel(objective, [])
 
-
-function SymNLPModel(objective, constraints)
+function SymNLPModel(objective, inequalities)
     variables = Sym.get_variables(objective)
+    constraints = map(inequality_to_expr, inequalities)
     hessian = Sym.sparsehessian(objective, variables)
     jacobian = Sym.sparsejacobian(constraints, variables)
     gradient = Sym.gradient(objective, variables)

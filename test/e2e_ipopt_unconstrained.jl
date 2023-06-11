@@ -2,17 +2,17 @@ using Symbolics
 using NLPModelsIpopt: ipopt
 
 @testset "unconstrained" begin
-    @testset "trivial single variable" begin
+    @testset "trivial single variable" for center in -2:1.3:2
         @variables x
 
-        center = randn()
-        obj = (x - center)^2
+        objective = (x - center)^2
+        tol = 1e-4
 
-        model = SymNLPModels.SymNLPModel(obj)
-        stats = ipopt(model; tol=1e-4, print_level=0)
+        model = SymNLPModel(objective)
+        stats = ipopt(model; tol, print_level=0)
 
         expected = [center]
         actual = stats.solution
-        @test isapprox(expected, actual; atol=1e-4)
+        @test isapprox(expected, actual; atol=tol)
     end
 end

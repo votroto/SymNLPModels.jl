@@ -1,4 +1,5 @@
 using LinearAlgebra: mul!
+using Symbolics: Inequality, geq
 
 function build_lagrangian_hessian(objective, constraints)
     variables = Sym.get_variables(objective)
@@ -36,4 +37,9 @@ function sa_structure!(rows, cols, sa)
     end
 
     rows, cols
+end
+
+function inequality_to_expr(ineq::Inequality)
+    lhs, rhs, op = ineq.lhs, ineq.rhs, ineq.relational_op
+    (op == geq) ? -lhs + rhs : lhs - rhs
 end
